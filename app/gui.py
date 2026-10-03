@@ -25,15 +25,46 @@ from .data import HOURS, MONTHS, analyze, findings, load_csv  # noqa: E402
 
 matplotlib.rcParams.update({"font.family": "DejaVu Sans", "axes.unicode_minus": False,
                             "axes.spines.top": False, "axes.spines.right": False,
-                            "axes.grid": True, "grid.alpha": 0.3})
+                            "axes.grid": True, "grid.alpha": 0.25, "figure.facecolor": "white",
+                            "axes.facecolor": "white", "axes.edgecolor": "#CBD5E1",
+                            "axes.labelcolor": "#334155", "text.color": "#334155",
+                            "xtick.color": "#64748B", "ytick.color": "#64748B"})
 BLUE, ORANGE, GREEN, RED, GRAY = "#2563EB", "#D97706", "#059669", "#DC2626", "#6B7280"
+
+# ---- палітра інтерфейсу (білий фон, темний текст, синій акцент) ----
+BG = "#FFFFFF"          # фон вікна та карток
+PANEL = "#F8FAFC"       # легкий фон смуг/панелей
+BORDER = "#E2E8F0"      # тонкі межі
+TEXT = "#1E293B"        # основний текст
+MUTED2 = "#64748B"      # другорядний текст
+ACCENT = "#2563EB"      # акцентний синій (головні кнопки)
+ACCENT_DARK = "#1D4ED8"
+ACCENT_LIGHT = "#EFF6FF"
+DANGER = "#DC2626"
+DANGER_DARK = "#B91C1C"
 DEFAULT_DATA = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "simulated_call_centre.csv")
 KPI_NAMES = {"calls_day": "Викликів за день", "wait_mean": "Середнє очікування, с", "waited_pct": "Чекали в черзі, %",
              "sla_pct": "SLA виконано, %", "p95": "P95 очікування, с", "util_pct": "Завантаження операторів, %",
              "q_max": "Макс. довжина черги"}
 
 
-#  допоміжні віджети
+# ================================================================= допоміжні віджети
+class _Toolbar(NavigationToolbar2Tk):
+    """Панель інструментів без напису з координатами курсора; білий фон під тему."""
+
+    def set_message(self, s):
+        pass                                                    # координати при наведенні на графік не показуємо
+
+    def __init__(self, canvas, parent):
+        super().__init__(canvas, parent, pack_toolbar=False)
+        self.configure(background=BG, highlightthickness=0, bd=0)
+        for child in self.winfo_children():
+            try:
+                child.configure(background=BG)
+            except tk.TclError:
+                pass
+
+
 class Chart(ttk.Frame):
     """Область з графіком matplotlib і панеллю інструментів (збереження в PNG)."""
 
@@ -41,7 +72,7 @@ class Chart(ttk.Frame):
         super().__init__(parent)
         self.fig = Figure(figsize=size, dpi=100, layout="constrained")   # поля підбираються автоматично при кожному перемальовуванні
         self.canvas = FigureCanvasTkAgg(self.fig, master=self)
-        NavigationToolbar2Tk(self.canvas, self, pack_toolbar=False).pack(side="bottom", fill="x")
+        _Toolbar(self.canvas, self).pack(side="bottom", fill="x")
         widget = self.canvas.get_tk_widget()
         widget.configure(width=200, height=160)                 # мінімальний запит; реальний розмір задає компонування
         widget.pack(fill="both", expand=True)
@@ -134,7 +165,7 @@ def spin(parent, var, lo, hi, step=1, width=9):
     return ttk.Spinbox(parent, textvariable=var, from_=lo, to=hi, increment=step, width=width)
 
 
-#  графіки
+# ================================================================= графіки
 def plot_data(fig, log, an):
     (a1, a2), (a3, a4) = fig.subplots(2, 2)
     a1.bar(range(HOURS), log.hourly_per_day(), color=BLUE)
@@ -224,7 +255,7 @@ def plot_validation(fig, df):
         ax.legend()
 
 
-#  вкладка «Дані»
+# ================================================================= вкладка «Дані»
 class DataTab(ttk.Frame):
     def __init__(self, parent, app):
         super().__init__(parent)
@@ -255,7 +286,7 @@ class DataTab(ttk.Frame):
         put(self.text, parts)
 
 
-#  вкладка «Симуляція»
+# ================================================================= вкладка «Симуляція»
 class SimTab(ttk.Frame):
     def __init__(self, parent, app):
         super().__init__(parent)
@@ -279,7 +310,7 @@ class SimTab(ttk.Frame):
         ttk.Checkbutton(left, text="Перший дзвінок о 08:00:00\n(як у журналі)", variable=self.first).grid(
             row=8, column=0, columnspan=2, sticky="w", padx=8, pady=4)
         ttk.Button(left, text="Калібрувати за даними", command=self.calibrate).grid(row=9, column=0, columnspan=2, sticky="ew", padx=8, pady=(10, 3))
-        ttk.Button(left, text="▶  Запустити (F5)", command=self.run).grid(row=10, column=0, columnspan=2, sticky="ew", padx=8, pady=3)
+        ttk.Button(left, text="▶  Запустити (F5)", style="Accent.TButton", command=self.run).grid(row=10, column=0, columnspan=2, sticky="ew", padx=8, pady=3)
         ttk.Button(left, text="Зберегти в Excel…", command=self.save_excel).grid(row=11, column=0, columnspan=2, sticky="ew", padx=8, pady=3)
 
         right = ttk.Frame(self)
@@ -385,7 +416,7 @@ class SimTab(ttk.Frame):
             messagebox.showerror("Експорт", str(e))
 
 
-#  вкладка «Підбір штату»
+# ================================================================= вкладка «Підбір штату»
 class SweepTab(ttk.Frame):
     def __init__(self, parent, app):
         super().__init__(parent)
@@ -397,7 +428,7 @@ class SweepTab(ttk.Frame):
                         ("Цільовий SLA, %", spin(bar, app.target, 50, 99.9, 1, width=6)), ("Прогонів", spin(bar, self.reps, 2, 100, width=5))):
             ttk.Label(bar, text=text).pack(side="left", padx=(10, 3))
             w.pack(side="left")
-        ttk.Button(bar, text="▶  Виконати підбір", command=self.run).pack(side="left", padx=16)
+        ttk.Button(bar, text="▶  Виконати підбір", style="Accent.TButton", command=self.run).pack(side="left", padx=16)
         ttk.Label(self, foreground=GRAY, wraplength=1100, justify="left",
                   text="Для кожної кількості операторів виконується серія симуляцій (параметри беруться з вкладки «Симуляція»). "
                        "Обирається мінімальний штат, що забезпечує цільовий SLA; результат порівнюється з формулою Erlang C.").pack(fill="x", padx=12)
@@ -441,7 +472,7 @@ class SweepTab(ttk.Frame):
         put(self.text, parts)
 
 
-#  вкладка «Валідація»
+# ================================================================= вкладка «Валідація»
 class ValidationTab(ttk.Frame):
     def __init__(self, parent, app):
         super().__init__(parent)
@@ -451,7 +482,7 @@ class ValidationTab(ttk.Frame):
         self.reps = tk.IntVar(value=8)
         ttk.Label(bar, text="Прогонів на місяць").pack(side="left")
         spin(bar, self.reps, 3, 100, width=5).pack(side="left", padx=6)
-        ttk.Button(bar, text="▶  Виконати валідацію", command=self.run).pack(side="left", padx=12)
+        ttk.Button(bar, text="▶  Виконати валідацію", style="Accent.TButton", command=self.run).pack(side="left", padx=12)
         ttk.Label(self, foreground=GRAY, wraplength=1100, justify="left",
                   text="Для кожного місяця журналу модель запускається з параметрами, відкаліброваними за даними цього місяця "
                        "(потік λ(t), кількість операторів, середня тривалість розмови), і порівнюється з фактичними показниками (у таблиці: факт → модель).").pack(fill="x", padx=12)
@@ -494,32 +525,27 @@ class ValidationTab(ttk.Frame):
         self.app.status.set("Валідацію завершено")
 
 
-#  головне вікно
+# ================================================================= головне вікно
 class App(tk.Tk):
     def __init__(self, path: str | None = None):
         super().__init__()
         self.title("Імітаційне моделювання контакт-центру")
         self.geometry("1280x820")
         self.minsize(1050, 680)
-        st = ttk.Style(self)
-        st.theme_use("clam")
-        st.configure("TNotebook.Tab", padding=(16, 7))
-        big = tkfont.nametofont("TkDefaultFont").copy()
-        big.configure(size=15, weight="bold")
-        self._big = big
-        st.configure("Big.TLabel", font=big)
+        self.configure(background=BG)
+        self._setup_style()
         self.log, self.result = None, None
         self.target = tk.DoubleVar(value=90.0)                  # цільовий SLA, спільний для вкладок
         self.status = tk.StringVar(value="Готово")
         self.q, self.stop, self.busy = queue.Queue(), threading.Event(), False
 
-        bar = ttk.Frame(self)
+        bar = ttk.Frame(self, style="Status.TFrame")
         bar.pack(side="bottom", fill="x")
-        ttk.Label(bar, textvariable=self.status).pack(side="left", padx=10, pady=4)
-        self.cancel_btn = ttk.Button(bar, text="Скасувати", command=self.stop.set, state="disabled")
-        self.cancel_btn.pack(side="right", padx=10)
+        ttk.Label(bar, textvariable=self.status, style="Status.TLabel").pack(side="left", padx=12, pady=6)
+        self.cancel_btn = ttk.Button(bar, text="Скасувати", style="Danger.TButton", command=self.stop.set, state="disabled")
+        self.cancel_btn.pack(side="right", padx=10, pady=5)
         self.pb = ttk.Progressbar(bar, length=220)
-        self.pb.pack(side="right")
+        self.pb.pack(side="right", pady=5)
 
         nb = ttk.Notebook(self)
         nb.pack(fill="both", expand=True, padx=8, pady=8)
@@ -532,6 +558,84 @@ class App(tk.Tk):
         self.bind("<Control-o>", lambda e: self.open_dialog())
         if path and os.path.exists(path):
             self.after(200, lambda: self.load(path))
+
+    # ---- зовнішній вигляд: білий фон, синій акцент замість стандартної сірої теми
+    def _setup_style(self):
+        big = tkfont.nametofont("TkDefaultFont").copy()
+        big.configure(size=16, weight="bold")
+        self._big = big
+        base = tkfont.nametofont("TkDefaultFont").copy()
+        base.configure(size=10)
+        self.option_add("*Font", base)
+
+        st = ttk.Style(self)
+        st.theme_use("clam")
+
+        # --- базові контейнери
+        st.configure(".", background=BG, foreground=TEXT, borderwidth=0, focuscolor=ACCENT)
+        st.configure("TFrame", background=BG)
+        st.configure("TLabel", background=BG, foreground=TEXT)
+        st.configure("Big.TLabel", background=BG, foreground=ACCENT_DARK, font=big)
+        st.configure("Status.TFrame", background=PANEL)
+        st.configure("Status.TLabel", background=PANEL, foreground=MUTED2)
+
+        # --- картки показників (LabelFrame)
+        st.configure("TLabelframe", background=BG, bordercolor=BORDER, lightcolor=BG, darkcolor=BG,
+                     borderwidth=1, relief="solid")
+        st.configure("TLabelframe.Label", background=BG, foreground=MUTED2, font=(base.actual("family"), 9, "bold"))
+
+        # --- вкладки
+        st.configure("TNotebook", background=BG, bordercolor=BORDER, tabmargins=(4, 6, 4, 0))
+        st.configure("TNotebook.Tab", background=PANEL, foreground=MUTED2, padding=(18, 9), borderwidth=0)
+        st.map("TNotebook.Tab", background=[("selected", BG)], foreground=[("selected", ACCENT_DARK)],
+               font=[("selected", (base.actual("family"), 10, "bold"))])
+
+        # --- звичайні кнопки (світлі, з межею)
+        st.configure("TButton", background=BG, foreground=TEXT, bordercolor=BORDER, lightcolor=BG, darkcolor=BG,
+                     borderwidth=1, relief="solid", padding=(12, 7), focusthickness=0, focuscolor="none")
+        st.map("TButton", background=[("disabled", PANEL), ("pressed", PANEL), ("active", PANEL)],
+               foreground=[("disabled", "#B9C2CE")], bordercolor=[("active", ACCENT)])
+
+        # --- акцентна кнопка (головна дія: «Запустити», «Виконати…»)
+        st.configure("Accent.TButton", background=ACCENT, foreground="white", bordercolor=ACCENT,
+                     lightcolor=ACCENT, darkcolor=ACCENT, borderwidth=0, relief="flat", padding=(14, 9),
+                     font=(base.actual("family"), 10, "bold"), focusthickness=0, focuscolor="none")
+        st.map("Accent.TButton", background=[("disabled", "#93B4F3"), ("pressed", ACCENT_DARK), ("active", ACCENT_DARK)],
+               foreground=[("disabled", "white")])
+
+        # --- кнопка небезпечної дії («Скасувати»)
+        st.configure("Danger.TButton", background=BG, foreground=DANGER, bordercolor=DANGER, lightcolor=BG, darkcolor=BG,
+                     borderwidth=1, relief="solid", padding=(12, 6), focusthickness=0, focuscolor="none")
+        st.map("Danger.TButton", background=[("disabled", BG), ("active", "#FEF2F2")],
+               foreground=[("disabled", "#D9B7B7")], bordercolor=[("disabled", BORDER)])
+
+        # --- поля вводу
+        for name in ("TEntry", "TSpinbox", "TCombobox"):
+            st.configure(name, fieldbackground="white", background="white", foreground=TEXT,
+                        bordercolor=BORDER, lightcolor="white", darkcolor="white", arrowcolor=MUTED2,
+                        borderwidth=1, relief="solid", padding=4)
+            st.map(name, bordercolor=[("focus", ACCENT)], fieldbackground=[("disabled", PANEL)])
+        st.map("TCombobox", selectbackground=[("readonly", "white")], selectforeground=[("readonly", TEXT)],
+               fieldbackground=[("readonly", "white")])
+
+        # --- прапорці
+        st.configure("TCheckbutton", background=BG, foreground=TEXT, focuscolor="none")
+        st.map("TCheckbutton", indicatorcolor=[("selected", ACCENT)])
+
+        # --- таблиця (Treeview)
+        st.configure("Treeview", background="white", fieldbackground="white", foreground=TEXT,
+                     bordercolor=BORDER, borderwidth=1, rowheight=24)
+        st.configure("Treeview.Heading", background=PANEL, foreground=TEXT, borderwidth=0,
+                     font=(base.actual("family"), 9, "bold"), relief="flat")
+        st.map("Treeview.Heading", background=[("active", PANEL)])
+        st.map("Treeview", background=[("selected", ACCENT_LIGHT)], foreground=[("selected", TEXT)])
+
+        # --- смуга прогресу та прокрутка
+        st.configure("TProgressbar", background=ACCENT, troughcolor=PANEL, bordercolor=PANEL, lightcolor=ACCENT, darkcolor=ACCENT)
+        st.configure("TScrollbar", background=PANEL, troughcolor=BG, bordercolor=BG, arrowcolor=MUTED2, gripcount=0)
+        st.map("TScrollbar", background=[("active", BORDER)])
+
+        st.configure("TPanedwindow", background=BG)
 
     # ---- дані
     def open_dialog(self):
@@ -554,7 +658,7 @@ class App(tk.Tk):
         self.tabs["sim"].calibrate()
         self.status.set(f"Завантажено {len(self.log.df):,} викликів; оцінка кількості операторів: {self.log.agents}".replace(",", " "))
 
-    #  фонове виконання: обчислення в потоці, інтерфейс не зависає
+    # ---- фонове виконання: обчислення в потоці, інтерфейс не зависає
     def run_bg(self, fn, done, text="Виконання…"):
         if self.busy:
             return

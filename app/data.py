@@ -1,4 +1,4 @@
-
+"""Завантаження журналу дзвінків та аналіз вхідних даних."""
 from __future__ import annotations
 
 import os

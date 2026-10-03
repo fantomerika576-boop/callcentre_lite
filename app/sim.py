@@ -1,4 +1,7 @@
+"""Імітаційна модель контакт-центру (одна черга FIFO, N операторів) і формули Erlang C.
 
+Бізнес-процес:  надходження виклику → черга → оператор (розмова) → перевірка SLA.
+"""
 from __future__ import annotations
 
 import heapq
@@ -38,7 +41,7 @@ def config_from_log(log, month: int | None = None, **kw) -> Config:
                   sla=log.sla, first_at_open=log.first_at_open, **kw)
 
 
-#  один робочий день
+# ---------------------------------------------------------------- один робочий день
 def simulate_day(cfg: Config, rng: np.random.Generator) -> dict:
     # 1. Потік надходжень: у кожній годині Poisson(λ) викликів, моменти рівномірні всередині години
     counts = rng.poisson(np.asarray(cfg.rates, float) * cfg.load)
@@ -128,7 +131,7 @@ def run(cfg: Config, progress=None, should_stop=None) -> Result:
                   elapsed=time.perf_counter() - t0)
 
 
-# аналітична модель M/M/c (Erlang C)
+# ---------------------------------------------------------------- аналітична модель M/M/c (Erlang C)
 def erlang_c(c: int, a: float) -> float:
     """Ймовірність очікування; c — операторів, a = λ·E[S] — навантаження в Ерлангах."""
     if a <= 0:
@@ -173,7 +176,7 @@ def min_agents(lam_h: float, mean: float, target: float, sla: float) -> int:
     return c
 
 
-#  експерименти
+# ---------------------------------------------------------------- експерименти
 def sweep(cfg: Config, values, progress=None, should_stop=None) -> pd.DataFrame:
     """Підбір штату: серія симуляцій для різної кількості операторів."""
     rows = []
